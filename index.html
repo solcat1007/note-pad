@@ -1,105 +1,261 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>极简便签 | Note Pad</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>便签本 · 本地自动保存</title>
+<meta name="description" content="自动保存到本地的快速记录工具，支持字数统计">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg">
+<meta name="theme-color" content="#ffca28">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="便签本">
 <style>
+
+:root{
+  --bg:#f4f5f7;           /* 页面底色：浅灰，避免纯白刺眼 */
+  --bg-glow:#ffffff;      /* 顶部径向光晕色，制造轻微的空间感 */
+  --surface:#ffffff;      /* 卡片底色 */
+  --surface-2:#fafbfc;    /* 卡片内的次级区块（输入框、结果区） */
+  --text:#16181d;         /* 主文字 */
+  --soft:#5d636e;         /* 次要文字 */
+  --mute:#8b929e;         /* 弱化文字（提示、单位、占位符） */
+  --line:#e6e8ec;         /* 分割线与边框 */
+  --accent:#26a69a;       /* 强调色（各玩具不同） */
+  --accent-soft:#e6f4f2;  /* 强调色的浅色版，用于底色块 */
+  --r-lg:20px; --r-md:14px; --r-sm:10px;
+  --ease:cubic-bezier(.4,0,.2,1);
+  --shadow:0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.06);
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#fff;color:#333;display:flex;flex-direction:column;height:100vh}
-.toolbar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#f0f8f9;border-bottom:1px solid #80deea;flex-wrap:wrap}
-.lang-btn{background:#00BCD4;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit}
-.lang-btn:hover{background:#0097A7}
-.toolbar button{padding:8px 16px;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s}
-.btn-new{background:#e0f7fa;color:#00BCD4;border:1px solid #e0f7fa}
-.btn-new:hover{background:#80deea}
-.btn-export{background:#00BCD4;color:#fff}
-.btn-export:hover{background:#0097A7}
-.btn-clear{background:#e0f7fa;color:#00BCD4;border:1px solid #e0f7fa}
-.btn-clear:hover{background:#80deea}
-.save-status{font-size:12px;color:#333;margin-left:auto}
-#editor{flex:1;width:100%;border:none;resize:none;padding:20px;font-size:15px;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:#333;background:#fff;outline:none;line-height:1.8}
-#editor::placeholder{color:#80deea}
+
+body{
+  font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--bg);
+  /* 顶部一层极淡光晕，比死板的纯色更有层次 */
+  background-image:radial-gradient(120% 80% at 50% 0%, var(--bg-glow) 0%, rgba(255,255,255,0) 62%);
+  background-attachment:fixed;
+  color:var(--text);
+  min-height:100dvh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:24px; -webkit-font-smoothing:antialiased;
+}
+
+.app{width:100%; max-width:480px; display:flex; flex-direction:column; align-items:center; gap:20px}
+
+.head{text-align:center}
+.head h1{font-size:22px; font-weight:600; letter-spacing:.5px}
+.head p{font-size:13px; color:var(--mute); margin-top:6px}
+
+.card{
+  width:100%; background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-lg); padding:22px; box-shadow:var(--shadow);
+}
+
+.stage{
+  width:288px; height:288px; position:relative;
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:50%; box-shadow:var(--shadow);
+  display:flex; align-items:center; justify-content:center;
+}
+.stage canvas{border-radius:50%}
+
+.phase{
+  font-size:29px; font-weight:300; letter-spacing:6px;
+  color:var(--accent); min-height:42px; text-align:center;
+  transition:color .4s var(--ease);
+}
+.cd{font-size:15px; color:var(--soft); font-variant-numeric:tabular-nums; min-height:22px}
+.meta{font-size:13px; color:var(--mute); min-height:20px; text-align:center}
+
+.row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center}
+.stats{display:flex; gap:10px; width:100%}
+.stat{
+  flex:1; background:var(--surface-2); border:1px solid var(--line);
+  border-radius:var(--r-md); padding:12px; text-align:center;
+}
+.stat .k{font-size:11px; color:var(--mute); letter-spacing:1px}
+.stat .v{font-size:21px; font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums}
+
+.chip{
+  padding:9px 18px; font-size:13px; font-weight:500; font-family:inherit;
+  background:var(--surface); color:var(--soft);
+  border:1px solid var(--line); border-radius:999px; cursor:pointer;
+  transition:all .2s var(--ease);
+}
+.chip:hover{border-color:var(--accent); color:var(--accent)}
+.chip.active{
+  background:var(--accent); border-color:var(--accent); color:#fff;
+  box-shadow:0 4px 14px rgba(0,0,0,.14);
+}
+
+.btn{
+  padding:13px 42px; font-size:15px; font-weight:600; font-family:inherit;
+  letter-spacing:3px; background:var(--accent); color:#fff;
+  border:none; border-radius:var(--r-md); cursor:pointer;
+  transition:transform .15s var(--ease), box-shadow .2s var(--ease);
+  box-shadow:0 6px 20px rgba(0,0,0,.16);
+}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.ghost{background:transparent; border:1px solid var(--line); color:var(--soft); box-shadow:none}
+
+.lang{
+  position:fixed; top:16px; right:16px; z-index:20;
+  padding:7px 14px; font-size:12px; font-weight:600; font-family:inherit;
+  background:var(--surface); color:var(--soft);
+  border:1px solid var(--line); border-radius:999px; cursor:pointer;
+  transition:all .2s var(--ease);
+}
+.lang:hover{border-color:var(--accent); color:var(--accent)}
+
+.hint{font-size:12px; color:var(--mute); text-align:center; line-height:1.7}
+
+@media (max-width:380px){
+  .stage{width:250px;height:250px}
+  .phase{font-size:25px; letter-spacing:4px}
+}
+
+:root{ --accent:#ffca28; --accent-soft:#fdf6e0; }
+
+textarea.note{
+  width:100%; min-height:240px; padding:16px; font-size:15px; font-family:inherit;
+  line-height:1.8; border:1px solid var(--line); border-radius:var(--r-md);
+  background:var(--surface-2); color:var(--text); resize:vertical;
+}
+textarea.note:focus{outline:none; border-color:var(--accent); background:var(--surface)}
+
 </style>
 </head>
 <body>
+<button class="lang" id="langBtn" onclick="toggleLang()">EN</button>
+<div class="app">
 
-<div class="toolbar">
-  <button class="lang-btn" id="langBtn" onclick="toggleLang()">EN</button>
-  <button class="btn-new" onclick="newNote()" data-key="new">新建</button>
-  <button class="btn-export" onclick="exportNote()" data-key="export">导出TXT</button>
-  <button class="btn-clear" onclick="clearNote()" data-key="clear">清空</button>
-  <span class="save-status" id="saveStatus" data-key="saved">已保存</span>
+  <div class="head">
+    <h1 id="t_title">便签本</h1>
+  </div>
+
+  <div class="card">
+    <textarea class="note" id="note" placeholder="写点什么…" oninput="onEdit()"></textarea>
+
+    <div class="stats" style="margin-top:14px">
+      <div class="stat"><div class="k" id="t_chars">字符</div><div class="v" id="vChars">0</div></div>
+      <div class="stat"><div class="k" id="t_lines">行数</div><div class="v" id="vLines">0</div></div>
+    </div>
+
+    <div class="meta" id="saved" style="margin-top:10px"></div>
+  </div>
+
+  <div class="row">
+    <button class="btn ghost" onclick="clearNote()">清空</button>
+    <button class="btn ghost" onclick="downloadNote()">下载</button>
+  </div>
+
+  <div class="hint" id="t_hint">内容保存在浏览器本地，换设备不会同步</div>
+
 </div>
-<textarea id="editor" data-key-placeholder="placeholder" placeholder="写点什么..."></textarea>
-
 <script>
-const zh = {
-  new:"新建", export:"导出TXT", clear:"清空", saved:"已保存", saving:"保存中...",
-  placeholder:"写点什么...", confirmNew:"确定要新建吗？当前内容将丢失。",
-  confirmClear:"确定要清空吗？"
-};
-const en = {
-  new:"New", export:"Export TXT", clear:"Clear", saved:"Saved", saving:"Saving...",
-  placeholder:"Write something...", confirmNew:"Create new note? Current content will be lost.",
-  confirmClear:"Clear all content?"
-};
-let lang = localStorage.getItem('notepad_lang') || 'zh';
-let ui = lang === 'zh' ? zh : en;
-function toggleLang(){ lang = lang === 'zh' ? 'en' : 'zh'; ui = lang === 'zh' ? zh : en; localStorage.setItem('notepad_lang', lang); updateUI(); }
-function updateUI(){
-  document.getElementById('langBtn').textContent = lang === 'zh' ? 'EN' : '中';
-  document.querySelectorAll('[data-key]').forEach(el=>{ const k=el.getAttribute('data-key'); if(ui[k]) el.textContent=ui[k]; });
-  document.getElementById('editor').placeholder = ui.placeholder;
-  if(autoSaveTimer === null) document.getElementById('saveStatus').textContent = ui.saved;
+
+/* ============================================================
+ * 便签本
+ * ------------------------------------------------------------
+ * 防抖（debounce）说明：
+ *   每次按键都写 localStorage 太浪费（尤其在长文本下），
+ *   所以停止输入 400ms 后才真正落盘。这就是 debounce。
+ * ========================================================== */
+
+const KEY = 'notepad_content';
+
+/* ---------- 存 / 取 ---------- */
+function loadNote(){
+  try { return localStorage.getItem(KEY) || ''; }
+  catch(e){ return ''; }        /* 隐私模式下可能抛异常 */
 }
 
-const editor = document.getElementById('editor');
-const STORAGE_KEY = 'notepad_content';
-let autoSaveTimer = null;
-
-function loadContent(){
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if(saved !== null) editor.value = saved;
-}
-function saveContent(){
-  localStorage.setItem(STORAGE_KEY, editor.value);
-  document.getElementById('saveStatus').textContent = ui.saved + ' ' + new Date().toLocaleTimeString();
-}
-function scheduleSave(){
-  document.getElementById('saveStatus').textContent = ui.saving;
-  if(autoSaveTimer) clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => { saveContent(); autoSaveTimer = null; }, 1000);
+function saveNote(){
+  const txt = document.getElementById('note').value;
+  try {
+    localStorage.setItem(KEY, txt);
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const ss = String(d.getSeconds()).padStart(2,'0');
+    document.getElementById('saved').textContent = I18N[lang].saved + ' ' + hh+':'+mm+':'+ss;
+  } catch(e){
+    document.getElementById('saved').textContent = I18N[lang].saveFailed;
+  }
 }
 
-editor.addEventListener('input', scheduleSave);
-editor.addEventListener('blur', ()=>{ if(autoSaveTimer){ clearTimeout(autoSaveTimer); autoSaveTimer=null; } saveContent(); });
+/* ---------- 防抖 ---------- */
+let debounceTimer = null;
 
-function newNote(){
-  if(editor.value && !confirm(ui.confirmNew)) return;
-  editor.value = '';
-  saveContent();
+/** 输入事件：更新统计，并延后 400ms 落盘 */
+function onEdit(){
+  updateStats();
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(saveNote, 400);
 }
-function exportNote(){
-  const blob = new Blob([editor.value],{type:'text/plain'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'note_' + new Date().toISOString().slice(0,10) + '.txt';
-  a.click();
+
+/** 统计字符数与行数 */
+function updateStats(){
+  const txt = document.getElementById('note').value;
+  document.getElementById('vChars').textContent = txt.length;
+  document.getElementById('vLines').textContent = txt ? txt.split('\n').length : 0;
 }
+
+/* ---------- 操作 ---------- */
 function clearNote(){
-  if(editor.value && !confirm(ui.confirmClear)) return;
-  editor.value = '';
-  saveContent();
+  if (!confirm(I18N[lang].confirmClear)) return;
+  document.getElementById('note').value = '';
+  updateStats();
+  saveNote();
 }
 
-function requestFullscreenWrapper(){
-  const el = document.documentElement;
-  if(el.requestFullscreen){ el.requestFullscreen().catch(()=>{}); }
-  else if(el.webkitRequestFullscreen){ el.webkitRequestFullscreen(); }
+/** 导出为 .txt 文件（Blob + 临时 a 标签，纯前端） */
+function downloadNote(){
+  const txt = document.getElementById('note').value;
+  const blob = new Blob([txt], { type:'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'note.txt';
+  a.click();
+  URL.revokeObjectURL(url);      /* 及时释放，避免内存泄漏 */
 }
-window.addEventListener('load', ()=>{ loadContent(); updateUI(); document.getElementById('saveStatus').textContent=ui.saved; setTimeout(requestFullscreenWrapper,500); });
-document.addEventListener('keydown', e => { if(e.key==='Escape'&&document.fullscreenElement&&document.exitFullscreen) document.exitFullscreen(); });
+
+const I18N_ = {
+  zh:{ title:'便签本', hint:'内容保存在浏览器本地，换设备不会同步',
+       chars:'字符', lines:'行数', clear:'清空', download:'下载',
+       saved:'已保存', saveFailed:'保存失败', confirmClear:'确定清空全部内容？' },
+  en:{ title:'Notes', hint:'Stored in this browser only, not synced',
+       chars:'Chars', lines:'Lines', clear:'Clear', download:'Download',
+       saved:'Saved', saveFailed:'Save failed', confirmClear:'Clear everything?' }
+};
+const I18N = I18N_;
+let lang = 'zh';
+
+function refresh(){
+  const L = I18N[lang];
+  document.getElementById('t_title').textContent = L.title;
+  document.getElementById('t_hint').textContent   = L.hint;
+  document.getElementById('t_chars').textContent  = L.chars;
+  document.getElementById('t_lines').textContent  = L.lines;
+  document.getElementById('langBtn').textContent  = (lang==='zh') ? 'EN' : '中';
+}
+function toggleLang(){ lang = (lang==='zh') ? 'en' : 'zh'; refresh(); }
+
+document.getElementById('note').value = loadNote();
+refresh();
+updateStats();
+
+/* ---------- PWA 注册 ----------
+ * 注册 Service Worker 后本页被缓存，断网也能打开。
+ * 放在最后且 catch 掉异常：即使浏览器不支持也不影响正常功能。 */
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
 </script>
 </body>
 </html>
