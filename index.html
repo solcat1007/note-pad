@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>极简便签 | Note Pad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#fff;color:#333;display:flex;flex-direction:column;height:100vh}
+.toolbar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#f0f8f9;border-bottom:1px solid #80deea;flex-wrap:wrap}
+.lang-btn{background:#00BCD4;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit}
+.lang-btn:hover{background:#0097A7}
+.toolbar button{padding:8px 16px;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-new{background:#e0f7fa;color:#00BCD4;border:1px solid #e0f7fa}
+.btn-new:hover{background:#80deea}
+.btn-export{background:#00BCD4;color:#fff}
+.btn-export:hover{background:#0097A7}
+.btn-clear{background:#e0f7fa;color:#00BCD4;border:1px solid #e0f7fa}
+.btn-clear:hover{background:#80deea}
+.save-status{font-size:12px;color:#333;margin-left:auto}
+#editor{flex:1;width:100%;border:none;resize:none;padding:20px;font-size:15px;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:#333;background:#fff;outline:none;line-height:1.8}
+#editor::placeholder{color:#80deea}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button class="lang-btn" id="langBtn" onclick="toggleLang()">EN</button>
+  <button class="btn-new" onclick="newNote()" data-key="new">新建</button>
+  <button class="btn-export" onclick="exportNote()" data-key="export">导出TXT</button>
+  <button class="btn-clear" onclick="clearNote()" data-key="clear">清空</button>
+  <span class="save-status" id="saveStatus" data-key="saved">已保存</span>
+</div>
+<textarea id="editor" data-key-placeholder="placeholder" placeholder="写点什么..."></textarea>
+
+<script>
+const zh = {
+  new:"新建", export:"导出TXT", clear:"清空", saved:"已保存", saving:"保存中...",
+  placeholder:"写点什么...", confirmNew:"确定要新建吗？当前内容将丢失。",
+  confirmClear:"确定要清空吗？"
+};
+const en = {
+  new:"New", export:"Export TXT", clear:"Clear", saved:"Saved", saving:"Saving...",
+  placeholder:"Write something...", confirmNew:"Create new note? Current content will be lost.",
+  confirmClear:"Clear all content?"
+};
+let lang = localStorage.getItem('notepad_lang') || 'zh';
+let ui = lang === 'zh' ? zh : en;
+function toggleLang(){ lang = lang === 'zh' ? 'en' : 'zh'; ui = lang === 'zh' ? zh : en; localStorage.setItem('notepad_lang', lang); updateUI(); }
+function updateUI(){
+  document.getElementById('langBtn').textContent = lang === 'zh' ? 'EN' : '中';
+  document.querySelectorAll('[data-key]').forEach(el=>{ const k=el.getAttribute('data-key'); if(ui[k]) el.textContent=ui[k]; });
+  document.getElementById('editor').placeholder = ui.placeholder;
+  if(autoSaveTimer === null) document.getElementById('saveStatus').textContent = ui.saved;
+}
+
+const editor = document.getElementById('editor');
+const STORAGE_KEY = 'notepad_content';
+let autoSaveTimer = null;
+
+function loadContent(){
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if(saved !== null) editor.value = saved;
+}
+function saveContent(){
+  localStorage.setItem(STORAGE_KEY, editor.value);
+  document.getElementById('saveStatus').textContent = ui.saved + ' ' + new Date().toLocaleTimeString();
+}
+function scheduleSave(){
+  document.getElementById('saveStatus').textContent = ui.saving;
+  if(autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => { saveContent(); autoSaveTimer = null; }, 1000);
+}
+
+editor.addEventListener('input', scheduleSave);
+editor.addEventListener('blur', ()=>{ if(autoSaveTimer){ clearTimeout(autoSaveTimer); autoSaveTimer=null; } saveContent(); });
+
+function newNote(){
+  if(editor.value && !confirm(ui.confirmNew)) return;
+  editor.value = '';
+  saveContent();
+}
+function exportNote(){
+  const blob = new Blob([editor.value],{type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'note_' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+}
+function clearNote(){
+  if(editor.value && !confirm(ui.confirmClear)) return;
+  editor.value = '';
+  saveContent();
+}
+
+function requestFullscreenWrapper(){
+  const el = document.documentElement;
+  if(el.requestFullscreen){ el.requestFullscreen().catch(()=>{}); }
+  else if(el.webkitRequestFullscreen){ el.webkitRequestFullscreen(); }
+}
+window.addEventListener('load', ()=>{ loadContent(); updateUI(); document.getElementById('saveStatus').textContent=ui.saved; setTimeout(requestFullscreenWrapper,500); });
+document.addEventListener('keydown', e => { if(e.key==='Escape'&&document.fullscreenElement&&document.exitFullscreen) document.exitFullscreen(); });
+</script>
+</body>
+</html>
