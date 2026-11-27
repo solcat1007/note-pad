@@ -3,259 +3,556 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>便签本 · 本地自动保存</title>
-<meta name="description" content="自动保存到本地的快速记录工具，支持字数统计">
+<title>便签本 · 本地自动保存 v2.0</title>
+<meta name="description" content="多笔记切换、自动保存状态提示、字数统计与 Markdown 预览的便签本">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg">
 <meta name="theme-color" content="#ffca28">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="便签本">
 <style>
-
 :root{
-  --bg:#f4f5f7;           /* 页面底色：浅灰，避免纯白刺眼 */
-  --bg-glow:#ffffff;      /* 顶部径向光晕色，制造轻微的空间感 */
-  --surface:#ffffff;      /* 卡片底色 */
-  --surface-2:#fafbfc;    /* 卡片内的次级区块（输入框、结果区） */
-  --text:#16181d;         /* 主文字 */
-  --soft:#5d636e;         /* 次要文字 */
-  --mute:#8b929e;         /* 弱化文字（提示、单位、占位符） */
-  --line:#e6e8ec;         /* 分割线与边框 */
-  --accent:#26a69a;       /* 强调色（各玩具不同） */
-  --accent-soft:#e6f4f2;  /* 强调色的浅色版，用于底色块 */
+  --bg:#f4f6f9; --surface:#ffffff; --surface-2:#f7f9fb;
+  --text:#16181d; --soft:#5d636e; --mute:#8b929e; --line:#e6e8ec;
+  --accent:#f0a500; --accent-soft:#fdf6e0;
   --r-lg:20px; --r-md:14px; --r-sm:10px;
   --ease:cubic-bezier(.4,0,.2,1);
-  --shadow:0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.06);
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.06);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-
 body{
   font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
   background:var(--bg);
-  /* 顶部一层极淡光晕，比死板的纯色更有层次 */
-  background-image:radial-gradient(120% 80% at 50% 0%, var(--bg-glow) 0%, rgba(255,255,255,0) 62%);
-  background-attachment:fixed;
-  color:var(--text);
-  min-height:100dvh;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  padding:24px; -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(120% 70% at 50% 0%,var(--accent-soft) 0%,rgba(255,255,255,0) 62%);
+  background-attachment:fixed;color:var(--text);min-height:100dvh;
+  display:flex;flex-direction:column;align-items:center;padding:20px 16px 44px;
+  -webkit-font-smoothing:antialiased;
 }
-
-.app{width:100%; max-width:480px; display:flex; flex-direction:column; align-items:center; gap:20px}
-
-.head{text-align:center}
-.head h1{font-size:22px; font-weight:600; letter-spacing:.5px}
-.head p{font-size:13px; color:var(--mute); margin-top:6px}
-
-.card{
-  width:100%; background:var(--surface); border:1px solid var(--line);
-  border-radius:var(--r-lg); padding:22px; box-shadow:var(--shadow);
-}
-
-.stage{
-  width:288px; height:288px; position:relative;
-  background:var(--surface); border:1px solid var(--line);
-  border-radius:50%; box-shadow:var(--shadow);
-  display:flex; align-items:center; justify-content:center;
-}
-.stage canvas{border-radius:50%}
-
-.phase{
-  font-size:29px; font-weight:300; letter-spacing:6px;
-  color:var(--accent); min-height:42px; text-align:center;
-  transition:color .4s var(--ease);
-}
-.cd{font-size:15px; color:var(--soft); font-variant-numeric:tabular-nums; min-height:22px}
-.meta{font-size:13px; color:var(--mute); min-height:20px; text-align:center}
-
-.row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center}
-.stats{display:flex; gap:10px; width:100%}
-.stat{
-  flex:1; background:var(--surface-2); border:1px solid var(--line);
-  border-radius:var(--r-md); padding:12px; text-align:center;
-}
-.stat .k{font-size:11px; color:var(--mute); letter-spacing:1px}
-.stat .v{font-size:21px; font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums}
-
-.chip{
-  padding:9px 18px; font-size:13px; font-weight:500; font-family:inherit;
-  background:var(--surface); color:var(--soft);
-  border:1px solid var(--line); border-radius:999px; cursor:pointer;
-  transition:all .2s var(--ease);
-}
-.chip:hover{border-color:var(--accent); color:var(--accent)}
-.chip.active{
-  background:var(--accent); border-color:var(--accent); color:#fff;
-  box-shadow:0 4px 14px rgba(0,0,0,.14);
-}
-
-.btn{
-  padding:13px 42px; font-size:15px; font-weight:600; font-family:inherit;
-  letter-spacing:3px; background:var(--accent); color:#fff;
-  border:none; border-radius:var(--r-md); cursor:pointer;
-  transition:transform .15s var(--ease), box-shadow .2s var(--ease);
-  box-shadow:0 6px 20px rgba(0,0,0,.16);
-}
-.btn:hover{transform:translateY(-1px)}
-.btn:active{transform:translateY(0)}
-.btn.ghost{background:transparent; border:1px solid var(--line); color:var(--soft); box-shadow:none}
-
+.app{width:100%;max-width:560px;display:flex;flex-direction:column;gap:16px}
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:2px}
+.head h1{font-size:22px;font-weight:700;letter-spacing:.5px}
+.head p{font-size:12px;color:var(--mute);margin-top:5px}
 .lang{
-  position:fixed; top:16px; right:16px; z-index:20;
-  padding:7px 14px; font-size:12px; font-weight:600; font-family:inherit;
-  background:var(--surface); color:var(--soft);
-  border:1px solid var(--line); border-radius:999px; cursor:pointer;
-  transition:all .2s var(--ease);
+  flex-shrink:0;padding:7px 14px;font-size:12px;font-weight:600;font-family:inherit;
+  background:var(--surface);color:var(--soft);border:1px solid var(--line);
+  border-radius:999px;cursor:pointer;transition:all .2s var(--ease);
 }
-.lang:hover{border-color:var(--accent); color:var(--accent)}
-
-.hint{font-size:12px; color:var(--mute); text-align:center; line-height:1.7}
-
-@media (max-width:380px){
-  .stage{width:250px;height:250px}
-  .phase{font-size:25px; letter-spacing:4px}
+.lang:hover{border-color:var(--accent);color:var(--accent)}
+.card{
+  width:100%;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow);
 }
-
-:root{ --accent:#ffca28; --accent-soft:#fdf6e0; }
-
+.tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px}
+.tab{
+  flex-shrink:0;display:flex;align-items:center;gap:6px;padding:8px 13px;
+  font-size:12px;font-family:inherit;background:var(--surface-2);color:var(--soft);
+  border:1px solid var(--line);border-radius:999px;cursor:pointer;transition:all .2s var(--ease);
+  max-width:170px;
+}
+.tab:hover{border-color:var(--accent)}
+.tab.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.tab .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab .x{font-size:14px;color:var(--mute);margin-left:2px}
+.tab .x:hover{color:#ef5350}
+.tab.add{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.title-input{
+  width:100%;padding:11px 13px;font-size:17px;font-weight:600;font-family:inherit;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface-2);color:var(--text);
+  margin-bottom:12px;
+}
+.title-input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.seg{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:999px;padding:3px;margin-bottom:12px;width:max-content}
+.seg button{
+  padding:6px 18px;font-size:12px;font-family:inherit;border:0;border-radius:999px;
+  background:transparent;color:var(--mute);cursor:pointer;transition:all .2s var(--ease);
+}
+.seg button.active{background:var(--accent);color:#fff;font-weight:600}
 textarea.note{
-  width:100%; min-height:240px; padding:16px; font-size:15px; font-family:inherit;
-  line-height:1.8; border:1px solid var(--line); border-radius:var(--r-md);
-  background:var(--surface-2); color:var(--text); resize:vertical;
+  width:100%;min-height:280px;padding:16px;font-size:15px;font-family:inherit;
+  line-height:1.8;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--surface-2);color:var(--text);resize:vertical;
 }
-textarea.note:focus{outline:none; border-color:var(--accent); background:var(--surface)}
-
+textarea.note:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.preview{
+  width:100%;min-height:280px;padding:16px;font-size:15px;line-height:1.8;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface-2);
+  overflow-wrap:break-word;
+}
+.preview h1,.preview h2,.preview h3{font-size:18px;margin:14px 0 8px;color:var(--text)}
+.preview h1{font-size:22px}
+.preview p{margin:8px 0}
+.preview ul,.preview ol{margin:8px 0 8px 22px}
+.preview li{margin:3px 0}
+.preview blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--soft);margin:8px 0}
+.preview code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:13px;font-family:ui-monospace,monospace}
+.preview pre{background:#1e222a;color:#d8dee9;padding:12px;border-radius:var(--r-sm);overflow-x:auto;margin:10px 0}
+.preview pre code{background:none;color:inherit;padding:0}
+.preview a{color:var(--accent)}
+.preview hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.preview del{color:var(--mute)}
+.stats{display:flex;gap:8px;margin-top:14px}
+.stat{flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:10px;text-align:center}
+.stat .k{font-size:11px;color:var(--mute);letter-spacing:1px}
+.stat .v{font-size:20px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
+.savebar{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--mute)}
+.dot{width:8px;height:8px;border-radius:50%;background:#66bb6a;transition:background .2s}
+.dot.saving{background:var(--accent);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.btn{
+  padding:11px 24px;font-size:14px;font-weight:600;font-family:inherit;
+  background:var(--accent);color:#fff;border:0;border-radius:var(--r-md);cursor:pointer;
+}
+.btn.ghost{background:var(--surface);border:1px solid var(--line);color:var(--soft)}
+.hint{font-size:12px;color:var(--mute);text-align:center;line-height:1.7}
+.toast{position:fixed;left:50%;bottom:32px;transform:translate(-50%,20px);background:rgba(22,24,29,.92);
+  color:#fff;padding:10px 20px;border-radius:999px;font-size:13px;z-index:1000;opacity:0;
+  pointer-events:none;transition:all .25s var(--ease)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
-<button class="lang" id="langBtn" onclick="toggleLang()">EN</button>
 <div class="app">
-
   <div class="head">
-    <h1 id="t_title">便签本</h1>
+    <div><h1 id="t_title">便签本</h1><p id="t_sub">多笔记 · 自动保存 · Markdown 预览</p></div>
+    <button class="lang" id="langBtn" onclick="toggleLang()">EN</button>
   </div>
 
   <div class="card">
-    <textarea class="note" id="note" placeholder="写点什么…" oninput="onEdit()"></textarea>
+    <div class="tabs" id="tabs"></div>
+    <input type="text" class="title-input" id="noteTitle" placeholder="笔记标题" oninput="onEdit()">
+    <div class="seg">
+      <button id="tabEdit" class="active" onclick="setMode('edit')">✎ <span id="t_edit">编辑</span></button>
+      <button id="tabPreview" onclick="setMode('preview')">◈ <span id="t_preview">预览</span></button>
+    </div>
+    <textarea class="note" id="note" placeholder="写点什么…（支持 Markdown）" oninput="onEdit()"></textarea>
+    <div class="preview" id="preview" style="display:none"></div>
 
-    <div class="stats" style="margin-top:14px">
+    <div class="stats">
       <div class="stat"><div class="k" id="t_chars">字符</div><div class="v" id="vChars">0</div></div>
+      <div class="stat"><div class="k" id="t_words">词数</div><div class="v" id="vWords">0</div></div>
       <div class="stat"><div class="k" id="t_lines">行数</div><div class="v" id="vLines">0</div></div>
     </div>
-
-    <div class="meta" id="saved" style="margin-top:10px"></div>
+    <div class="savebar"><span class="dot" id="dot"></span><span id="saved"></span></div>
   </div>
 
   <div class="row">
-    <button class="btn ghost" onclick="clearNote()">清空</button>
-    <button class="btn ghost" onclick="downloadNote()">下载</button>
+    <button class="btn ghost" onclick="clearNote()">⌫ <span id="t_clear">清空</span></button>
+    <button class="btn ghost" onclick="downloadNote()">⇩ <span id="t_download">下载</span></button>
   </div>
 
   <div class="hint" id="t_hint">内容保存在浏览器本地，换设备不会同步</div>
-
 </div>
-<script>
+<div class="toast" id="toast"></div>
 
+<script>
 /* ============================================================
- * 便签本
+ * 便签本 v2.0
  * ------------------------------------------------------------
- * 防抖（debounce）说明：
- *   每次按键都写 localStorage 太浪费（尤其在长文本下），
- *   所以停止输入 400ms 后才真正落盘。这就是 debounce。
+ * 防抖：停止输入 500ms 后才写 localStorage，减少长文本下的写入。
+ * v2.0 新增：多笔记切换、保存状态提示、Markdown 预览、词数统计。
+ * Markdown 预览先转义 HTML，杜绝 XSS。
  * ========================================================== */
 
-const KEY = 'notepad_content';
+const KEY = 'notepad_v2';
+let notes = [], activeId = null, mode = 'edit';
+let debounceTimer = null;
 
-/* ---------- 存 / 取 ---------- */
-function loadNote(){
-  try { return localStorage.getItem(KEY) || ''; }
-  catch(e){ return ''; }        /* 隐私模式下可能抛异常 */
+const I18N = {
+  zh:{ title:'便签本', sub:'多笔记 · 自动保存 · Markdown 预览',
+       hint:'内容保存在浏览器本地，换设备不会同步',
+       edit:'编辑', preview:'预览', chars:'字符', words:'词数', lines:'行数',
+       clear:'清空', download:'下载', saved:'已保存', saving:'保存中…',
+       failed:'保存失败', confirmClear:'确定清空当前笔记？', confirmDel:'确定删除这条笔记？',
+       untitled:'未命名笔记', newNote:'+ 新建', copied:'已复制' },
+  en:{ title:'Note Pad', sub:'Multiple notes · Autosave · Markdown preview',
+       hint:'Stored in this browser only, not synced',
+       edit:'Edit', preview:'Preview', chars:'Chars', words:'Words', lines:'Lines',
+       clear:'Clear', download:'Download', saved:'Saved', saving:'Saving…',
+       failed:'Save failed', confirmClear:'Clear this note?', confirmDel:'Delete this note?',
+       untitled:'Untitled', newNote:'+ New', copied:'Copied' }
+};
+let lang = 'zh';
+
+/* ---------- 存取 ---------- */
+function loadNotes(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if (raw){
+      const d = JSON.parse(raw);
+      notes = d.notes || []; activeId = d.activeId;
+    }
+  }catch(e){}
+  if (!notes.length){
+    notes = [{ id:Date.now(), title:'', content:'', updatedAt:Date.now() }];
+    activeId = notes[0].id;
+  }
+  if (!notes.some(function(n){ return n.id === activeId; })) activeId = notes[0].id;
 }
+function saveNotes(){
+  try{ localStorage.setItem(KEY, JSON.stringify({ notes:notes, activeId:activeId })); return true; }
+  catch(e){ return false; }
+}
+function current(){ return notes.find(function(n){ return n.id === activeId; }); }
 
-function saveNote(){
-  const txt = document.getElementById('note').value;
-  try {
-    localStorage.setItem(KEY, txt);
+function setStatus(text, saving){
+  document.getElementById('saved').textContent = text;
+  document.getElementById('dot').classList.toggle('saving', !!saving);
+}
+function commit(){
+  const n = current();
+  if (!n) return;
+  n.content = document.getElementById('note').value;
+  n.title = document.getElementById('noteTitle').value.trim() || I18N[lang].untitled;
+  n.updatedAt = Date.now();
+  const ok = saveNotes();
+  if (ok){
     const d = new Date();
     const hh = String(d.getHours()).padStart(2,'0');
     const mm = String(d.getMinutes()).padStart(2,'0');
     const ss = String(d.getSeconds()).padStart(2,'0');
-    document.getElementById('saved').textContent = I18N[lang].saved + ' ' + hh+':'+mm+':'+ss;
-  } catch(e){
-    document.getElementById('saved').textContent = I18N[lang].saveFailed;
-  }
+    setStatus(I18N[lang].saved + ' ' + hh+':'+mm+':'+ss, false);
+  } else setStatus(I18N[lang].failed, false);
+  renderTabs();
 }
 
-/* ---------- 防抖 ---------- */
-let debounceTimer = null;
-
-/** 输入事件：更新统计，并延后 400ms 落盘 */
 function onEdit(){
   updateStats();
+  setStatus(I18N[lang].saving, true);
   clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(saveNote, 400);
+  debounceTimer = setTimeout(commit, 500);
+  if (mode === 'preview') renderPreview();
 }
 
-/** 统计字符数与行数 */
 function updateStats(){
   const txt = document.getElementById('note').value;
   document.getElementById('vChars').textContent = txt.length;
+  document.getElementById('vWords').textContent = txt.trim() ? txt.trim().split(/\s+/).length : 0;
   document.getElementById('vLines').textContent = txt ? txt.split('\n').length : 0;
+}
+
+/* ---------- 多笔记 ---------- */
+function renderTabs(){
+  const box = document.getElementById('tabs');
+  box.innerHTML = '';
+  notes.forEach(function(n){
+    const b = document.createElement('button');
+    b.className = 'tab' + (n.id === activeId ? ' active' : '');
+    const nm = document.createElement('span');
+    nm.className = 'nm'; nm.textContent = n.title || I18N[lang].untitled;
+    const x = document.createElement('span');
+    x.className = 'x'; x.textContent = '×'; x.title = I18N[lang].confirmDel;
+    x.onclick = function(e){
+      e.stopPropagation();
+      if (notes.length === 1 || !confirm(I18N[lang].confirmDel)) return;
+      clearTimeout(debounceTimer);
+      notes = notes.filter(function(it){ return it.id !== n.id; });
+      if (n.id === activeId) activeId = notes[0].id;
+      saveNotes(); loadNote();
+    };
+    b.appendChild(nm); b.appendChild(x);
+    b.onclick = function(){ switchNote(n.id); };
+    box.appendChild(b);
+  });
+  const add = document.createElement('button');
+  add.className = 'tab add'; add.textContent = I18N[lang].newNote;
+  add.onclick = newNote;
+  box.appendChild(add);
+}
+function switchNote(id){
+  if (id === activeId) return;
+  commit();
+  activeId = id;
+  saveNotes();
+  loadNote();
+}
+function newNote(){
+  commit();
+  const n = { id:Date.now(), title:'', content:'', updatedAt:Date.now() };
+  notes.push(n); activeId = n.id;
+  saveNotes(); loadNote();
+}
+function loadNote(){
+  const n = current();
+  document.getElementById('noteTitle').value = n.title === I18N[lang].untitled ? '' : n.title;
+  document.getElementById('note').value = n.content;
+  updateStats(); renderTabs();
+  if (mode === 'preview') renderPreview();
+  setStatus('', false);
+}
+
+/* ---------- Markdown 预览 ---------- */
+function mdRender(src){
+  const codes = [];
+  let h = src.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  h = h.replace(/```([\s\S]*?)```/g, function(m,c){ codes.push(c.replace(/^\n+|\n+$/g,'')); return '§CODE'+(codes.length-1)+'§'; });
+  h = h.replace(/`([^`]+)`/g, '<code>$1</code>')
+       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+       .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+       .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+       .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+  const lines = h.split('\n');
+  const out = [];
+  let para = [], listType = null, quote = [];
+
+  function flushPara(){ if (para.length){ out.push('<p>'+para.join('<br>')+'</p>'); para = []; } }
+  function flushList(){ if (listType){ out.push('</'+listType+'>'); listType = null; } }
+  function flushQuote(){ if (quote.length){ out.push('<blockquote>'+quote.join('<br>')+'</blockquote>'); quote = []; } }
+
+  lines.forEach(function(line){
+    if (/§CODE\d+§/.test(line.trim())){
+      flushPara(); flushList(); flushQuote();
+      out.push('<pre><code>'+line.trim()+'</code></pre>'); return;
+    }
+    const hd = line.match(/^(#{1,6})\s+(.*)$/);
+    if (hd){ flushPara(); flushList(); flushQuote();
+      out.push('<h'+hd[1].length+'>'+hd[2]+'</h'+hd[1].length+'>'); return; }
+    if (/^\s*(---|\*\*\*)\s*$/.test(line)){ flushPara(); flushList(); flushQuote(); out.push('<hr>'); return; }
+    const ul = line.match(/^\s*[-*]\s+(.*)$/);
+    if (ul){ flushPara(); flushQuote();
+      if (listType !== 'ul'){ flushList(); out.push('<ul>'); listType = 'ul'; }
+      out.push('<li>'+ul[1]+'</li>'); return; }
+    const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+    if (ol){ flushPara(); flushQuote();
+      if (listType !== 'ol'){ flushList(); out.push('<ol>'); listType = 'ol'; }
+      out.push('<li>'+ol[1]+'</li>'); return; }
+    const bq = line.match(/^>\s?(.*)$/);
+    if (bq){ flushPara(); flushList(); quote.push(bq[1]); return; }
+    if (!line.trim()){ flushPara(); flushList(); flushQuote(); return; }
+    flushList(); flushQuote(); para.push(line);
+  });
+  flushPara(); flushList(); flushQuote();
+
+  return out.join('\n').replace(/§CODE(\d+)§/g, function(m,i){ return codes[i]; });
+}
+function renderPreview(){
+  document.getElementById('preview').innerHTML = mdRender(document.getElementById('note').value);
+}
+function setMode(m){
+  mode = m;
+  document.getElementById('tabEdit').classList.toggle('active', m === 'edit');
+  document.getElementById('tabPreview').classList.toggle('active', m === 'preview');
+  document.getElementById('note').style.display = m === 'edit' ? '' : 'none';
+  document.getElementById('preview').style.display = m === 'preview' ? '' : 'none';
+  if (m === 'preview') renderPreview();
 }
 
 /* ---------- 操作 ---------- */
 function clearNote(){
   if (!confirm(I18N[lang].confirmClear)) return;
   document.getElementById('note').value = '';
-  updateStats();
-  saveNote();
+  updateStats(); setStatus(I18N[lang].saving, true);
+  clearTimeout(debounceTimer); debounceTimer = setTimeout(commit, 100);
 }
-
-/** 导出为 .txt 文件（Blob + 临时 a 标签，纯前端） */
 function downloadNote(){
-  const txt = document.getElementById('note').value;
-  const blob = new Blob([txt], { type:'text/plain;charset=utf-8' });
+  const n = current();
+  const blob = new Blob([document.getElementById('note').value], { type:'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'note.txt';
-  a.click();
-  URL.revokeObjectURL(url);      /* 及时释放，避免内存泄漏 */
+  a.href = url; a.download = (n.title || 'note') + '.txt'; a.click();
+  URL.revokeObjectURL(url);
 }
-
-const I18N_ = {
-  zh:{ title:'便签本', hint:'内容保存在浏览器本地，换设备不会同步',
-       chars:'字符', lines:'行数', clear:'清空', download:'下载',
-       saved:'已保存', saveFailed:'保存失败', confirmClear:'确定清空全部内容？' },
-  en:{ title:'Notes', hint:'Stored in this browser only, not synced',
-       chars:'Chars', lines:'Lines', clear:'Clear', download:'Download',
-       saved:'Saved', saveFailed:'Save failed', confirmClear:'Clear everything?' }
-};
-const I18N = I18N_;
-let lang = 'zh';
+let toastTimer = null;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = '☠ ' + msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 1600);
+}
 
 function refresh(){
   const L = I18N[lang];
-  document.getElementById('t_title').textContent = L.title;
-  document.getElementById('t_hint').textContent   = L.hint;
-  document.getElementById('t_chars').textContent  = L.chars;
-  document.getElementById('t_lines').textContent  = L.lines;
-  document.getElementById('langBtn').textContent  = (lang==='zh') ? 'EN' : '中';
+  ['title','sub','hint','edit','preview','chars','words','lines','clear','download']
+    .forEach(function(k){ document.getElementById('t_'+k).textContent = L[k]; });
+  document.getElementById('noteTitle').placeholder = L.untitled;
+  document.getElementById('langBtn').textContent = (lang==='zh') ? 'EN' : '中';
+  renderTabs();
 }
-function toggleLang(){ lang = (lang==='zh') ? 'en' : 'zh'; refresh(); }
+function toggleLang(){ lang = (lang==='zh') ? 'en' : 'zh'; refresh(); loadNote(); }
 
-document.getElementById('note').value = loadNote();
+/* 专属彩蛋入口：写入一条隐藏笔记内容 */
+window.__PAD_EGG__ = function(){
+  const el = document.getElementById('note');
+  el.value = (el.value ? el.value + '\n\n' : '') + '# ☠ SOLCAT\n\n> 你找到了隐藏笔记。\n\n**彩蛋已解锁！**';
+  onEdit(); toast('☠ 隐藏笔记内容已写入');
+};
+
+loadNotes();
 refresh();
-updateStats();
+loadNote();
 
-/* ---------- PWA 注册 ----------
- * 注册 Service Worker 后本页被缓存，断网也能打开。
- * 放在最后且 catch 掉异常：即使浏览器不支持也不影响正常功能。 */
 if ('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     navigator.serviceWorker.register('./sw.js').catch(function(){});
   });
 }
+</script>
+<!-- SOLCAT EASTER EGG PROTOCOL v2.0 -->
+<script>
+/* ============================================================
+ * SOLCAT EASTER EGG PROTOCOL v2.0 — 通用彩蛋引擎
+ * 零依赖 · 单文件 · 可注入任意 HTML 项目
+ * ============================================================ */
+(function(){
+  'use strict';
+  if (window.__SOLCAT_EGG__) return;
+  window.__SOLCAT_EGG__ = { version:'2.0', unlocked:new Set(), onUnlock:[] };
+
+  var E = window.__SOLCAT_EGG__;
+  var KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+  var seq = [], logoClicks = 0, logoTimer = null;
+
+  /* ---------- 1. 控制台署名（ASCII Art） ---------- */
+  function banner(){
+    var art = '%c\n  ____             _   _       _   _   \n' +
+      ' / ___|  ___  _ __| |_(_) __ _| |_| |__  \n' +
+      ' \\___ \\ / _ \\| \'__| __| |/ _` | __| \'_ \\ \n' +
+      '  ___) | (_) | |  | |_| | (_| | |_| | | |\n' +
+      ' |____/ \\___/|_|   \\__|_|\\__,_|\\__|_| |_|\n';
+    console.log(art, 'color:#26a69a;font-family:monospace;font-weight:bold');
+    console.log('%c☠ SOLCAT EASTER EGG PROTOCOL v2.0 — 你找到了隐藏入口',
+      'color:#666;font-size:11px;letter-spacing:1px');
+    console.log('%c提示：↑↑↓↓←→←→BA · 连点标题 5 次 · 输入 solcat · Ctrl+Shift+T',
+      'color:#999;font-size:10px');
+  }
+
+  /* ---------- 2. 烟花彩带粒子 ---------- */
+  function confetti(){
+    var colors = ['#26a69a','#42a5f5','#ef5350','#ffca28','#ab47bc','#66bb6a','#ff7043'];
+    var cvs = document.createElement('canvas');
+    cvs.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:99999';
+    document.body.appendChild(cvs);
+    var ctx = cvs.getContext('2d'), W = cvs.width = innerWidth, H = cvs.height = innerHeight;
+    var P = [];
+    for (var i=0;i<180;i++) P.push({
+      x:W/2+(Math.random()-.5)*120, y:H*.4+(Math.random()-.5)*40,
+      vx:(Math.random()-.5)*18, vy:-Math.random()*16-4,
+      c:colors[i%colors.length], s:Math.random()*8+4, r:Math.random()*6,
+      life:1, spin:(Math.random()-.5)*.3
+    });
+    var f = 0;
+    (function draw(){
+      f++; ctx.clearRect(0,0,W,H);
+      P.forEach(function(p){
+        p.x+=p.vx; p.y+=p.vy; p.vy+=.35; p.vx*=.99; p.r+=p.spin; p.life-=.006;
+        if(p.life<=0) return;
+        ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.globalAlpha=p.life;
+        ctx.fillStyle=p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6); ctx.restore();
+      });
+      if (f<180) requestAnimationFrame(draw); else cvs.remove();
+    })();
+  }
+
+  /* ---------- 3. 隐藏开发者面板 ---------- */
+  function devPanel(app){
+    var old = document.getElementById('__egg_panel');
+    if (old){ old.remove(); return; }
+    var d = document.createElement('div');
+    d.id='__egg_panel';
+    d.style.cssText='position:fixed;bottom:20px;right:20px;z-index:99998;width:280px;'+
+      'background:rgba(18,20,26,.94);color:#e0e0e0;border:1px solid #26a69a;border-radius:14px;'+
+      'padding:18px;font:12px/1.7 ui-monospace,monospace;backdrop-filter:blur(12px);'+
+      'box-shadow:0 12px 40px rgba(0,0,0,.4);animation:eggIn .3s ease';
+    d.innerHTML='<div style="color:#26a69a;font-weight:bold;font-size:13px;margin-bottom:10px">'+
+      '☠ SOLCAT 开发者模式</div>'+
+      '<div>应用　　: '+app+'</div>'+
+      '<div>协议　　: EGG PROTOCOL v'+E.version+'</div>'+
+      '<div>解锁数　: '+E.unlocked.size+'</div>'+
+      '<div>UA　　　: '+(navigator.userAgent.slice(0,38))+'…</div>'+
+      '<div>屏幕　　: '+innerWidth+'×'+innerHeight+'</div>'+
+      '<div>运行时间: '+Math.round(performance.now()/1000)+'s</div>'+
+      '<div style="color:#888;margin-top:10px;border-top:1px solid #333;padding-top:8px">'+
+      '已解锁: '+Array.from(E.unlocked).join(', ')+'</div>'+
+      '<button onclick="this.parentNode.remove()" style="margin-top:12px;width:100%;padding:6px;'+
+      'background:#26a69a;color:#fff;border:0;border-radius:6px;cursor:pointer">关闭</button>';
+    document.body.appendChild(d);
+  }
+
+  /* ---------- 4. 隐藏主题（赛博朋克） ---------- */
+  function cyberTheme(){
+    var s=document.getElementById('__egg_cyber');
+    if(s){ s.remove(); document.body.classList.remove('egg-cyber'); return; }
+    s=document.createElement('style'); s.id='__egg_cyber';
+    s.textContent='body.egg-cyber{filter:invert(1) hue-rotate(180deg)!important;}'+
+      'body.egg-cyber *{font-family:"Courier New",monospace!important;letter-spacing:1px}';
+    document.head.appendChild(s); document.body.classList.add('egg-cyber');
+    unlock('cyber','☠ 赛博模式已启用');
+  }
+
+  /* ---------- 5. 解锁分发 ---------- */
+  function unlock(id,msg){
+    if (E.unlocked.has(id)) return;
+    E.unlocked.add(id);
+    if (msg) console.log('%c[EGG] '+msg,'color:#ffca28;font-weight:bold');
+    E.onUnlock.forEach(function(fn){ try{fn(id);}catch(e){} });
+    var t=document.createElement('div');
+    t.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);'+
+      'z-index:99997;background:rgba(18,20,26,.92);color:#ffca28;padding:18px 28px;'+ 
+      'border:1px solid #ffca28;border-radius:12px;font:14px ui-monospace,monospace;'+
+      'pointer-events:none;animation:eggIn .3s ease;box-shadow:0 8px 30px rgba(0,0,0,.4)';
+    t.textContent='☠ '+msg;
+    document.body.appendChild(t); setTimeout(function(){t.remove();},2200);
+  }
+
+  /* ---------- 6. 事件绑定 ---------- */
+  function init(){
+    var app = document.title || 'SOLCAT App';
+    banner();
+
+    // Konami 秘籍
+    addEventListener('keydown', function(e){
+      var k = e.key.length===1 ? e.key.toLowerCase() : e.key;
+      seq.push(k); if(seq.length>KONAMI.length) seq.shift();
+      if (seq.length===KONAMI.length && KONAMI.every(function(v,i){return seq[i]===v;})){
+        seq=[]; confetti(); unlock('konami','KONAMI CODE 已激活！');
+      }
+      // Ctrl+Shift+T → 赛博主题
+      if (e.ctrlKey && e.shiftKey && (e.key==='T'||e.key==='t')){
+        e.preventDefault(); cyberTheme();
+      }
+      // 输入 solcat
+      if (e.key==='Enter' && window.__eggBuf__ === 'solcat'){ cyberTheme(); window.__eggBuf__=''; }
+      if (k.length===1) window.__eggBuf__ = ((window.__eggBuf__||'')+k).slice(-10);
+    });
+
+    // 连点标题 5 次 → 开发者面板
+    addEventListener('DOMContentLoaded', function(){
+      var targets = document.querySelectorAll('h1,.head h1,.logo,header h1');
+      var t = targets[0];
+      if(t){ t.style.cursor='default'; t.addEventListener('click',function(){
+        logoClicks++;
+        clearTimeout(logoTimer);
+        logoTimer=setTimeout(function(){logoClicks=0;},900);
+        if(logoClicks>=5){ logoClicks=0; devPanel(app); unlock('dev','开发者模式已解锁'); }
+      });}
+      // 给 body 加动画 keyframe
+      var a=document.createElement('style');
+      a.textContent='@keyframes eggIn{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}';
+      document.head.appendChild(a);
+    });
+
+    console.log('%c☠ 彩蛋引擎已加载 — 祝你玩得开心','color:#26a69a');
+  }
+
+  if (document.readyState==='loading') addEventListener('DOMContentLoaded',init);
+  else init();
+})();
+
+</script>
+<script>
+(function(){
+  var E = window.__SOLCAT_EGG__;
+  if (!E) return;
+
+    var fired = false;
+    E.onUnlock.push(function(id){
+      if (fired || ['konami','dev','cyber'].indexOf(id) < 0) return;
+      fired = true;
+      window.__PAD_EGG__();
+    });
+})();
 </script>
 </body>
 </html>
