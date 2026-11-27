@@ -1,7 +1,8 @@
 {
+  "version": "2.0.0",
   "name": "便签本 · 小工具",
   "short_name": "便签本",
-  "description": "自动保存到本地的快速记录",
+  "description": "多笔记切换、自动保存与 Markdown 预览 v2.0",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
